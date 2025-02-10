@@ -4,7 +4,6 @@ library(knitr)
 library(kableExtra)
 
 # === Compute summary statistics from your data ===
-load("/Users/nicolaskubista/Partners HealthCare Dropbox/BayesMendel/Projects/Active/NK_PenetranceEstimation/3_Code/CCGCRN Data Application/PALB2/PALB2_carrier_families.RData")
 dat <- bind_rows(carrier_families_list, .id="id")
 
 # Subset the data to include only Hispanic individuals

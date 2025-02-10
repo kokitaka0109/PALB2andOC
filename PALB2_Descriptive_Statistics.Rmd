@@ -1,0 +1,538 @@
+---
+title: "PALB2_Descriptive"
+author: "Koki Takabatake"
+date: "2024-09-11"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r }
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+# Load data
+load("'/Users/kokitakabatake/Partners HealthCare Dropbox/BayesMendel/Projects/Active/NK_PenetranceEstimation/3_Code/CCGCRN Data Application/PALB2/PALB2_carrier_families.RData'")
+
+dat <- bind_rows(carrier_families_list, .id="id")
+# Summarize the number of columns
+num_columns <- ncol(dat)
+cat("Number of columns:", num_columns, "\n")
+
+```
+
+
+
+```{r}
+# Define Lynch syndrome genes
+lynch_genes <- c("PALB2")
+lynch_cancers <- c("isAffBRA", "isAffBC", "isAffCER", "isAffCOL",  "isAffENDO", "isAffGAS", "isAffKID", "isAffLEUK", "isAffMELA",  "isAffOC", "isAffOST", "isAffPANC","isAffPROS", "isAffSMA", "isAffSTS", "isAffTHY", "isAffUB", "isAffHEP", "isAffCBC", "isAffBC2")
+
+lynch_ages <- c( "AgeBRA", "AgefBC", "AgeCER", "AgeCOL",  "AgeENDO", "AgeGAS", "AgeKID", "AgeLEUK", "AgeMELA",  "AgeOC", "AgeOST", "AgePANC","AgePROS", "AgeSMA", "AgeSTS", "AgeTHY", "AgeUB", "AgeHEP", "AgeCBC", "AgeBC2")
+
+# Function to create summary statistics and plots for each gene
+# Function to create summary statistics and plots for each gene
+create_gene_summaries <- function(gene, data) {
+
+  # Filter data for probands who are carriers of the gene
+  carriers <- data[data[[gene]] == 1 & data$isProband == 1, ]
+  carrier_families <- data[data$PedigreeID %in% carriers$PedigreeID, ]
+  
+  # Filter affected individuals
+  affected <- carrier_families[rowSums(carrier_families[lynch_cancers] == 1) > 0, ]
+  
+  # Number of individuals and families
+  num_individuals <- nrow(carrier_families)
+  num_families <- n_distinct(carrier_families$PedigreeID)
+  num_females <- sum(carrier_families$Sex == 0)
+  num_males <- sum(carrier_families$Sex == 1)
+  num_geno_1 <- sum(carrier_families[[gene]] == 1, na.rm = TRUE)
+  num_genotyped <- sum(carrier_families[[gene]] %in% c(0, 1), na.rm = TRUE)
+  # Calculate the average number of individuals per family
+avg_individuals_per_family <- carrier_families %>%
+  group_by(PedigreeID) %>%
+  summarise(num_individuals = n()) %>%
+  summarise(avg_individuals = mean(num_individuals))
+
+
+# Print the result
+cat("Average number of individuals per family:", avg_individuals_per_family$avg_individuals, "\n")
+
+# Calculate the range of family size
+family_size_range <- carrier_families %>%
+  group_by(PedigreeID) %>%
+  summarise(num_individuals = n()) %>%
+  summarise(min_size = min(num_individuals), max_size = max(num_individuals))
+
+# Print the result
+cat("Range of family size: Min =", family_size_range$min_size, "Max =", family_size_range$max_size, "\n")
+
+
+  
+  # Number of affected individuals for each cancer by gender
+  
+  num_aff_BRA_female <- sum(carrier_families$isAffBRA == 1 & carrier_families$Sex == 0)
+  num_aff_BRA_male <- sum(carrier_families$isAffBRA == 1 & carrier_families$Sex == 1)
+  
+  num_aff_BC_female <- sum(carrier_families$isAffBC == 1 & carrier_families$Sex == 0)
+  num_aff_BC_male <- sum(carrier_families$isAffBC == 1 & carrier_families$Sex == 1)
+  
+  num_aff_CER_female <- sum(carrier_families$isAffCER == 1 & carrier_families$Sex == 0)
+  num_aff_CER_male <- sum(carrier_families$isAffCER == 1 & carrier_families$Sex == 1)
+  
+    num_aff_COL_female <- sum(carrier_families$isAffCOL == 1 & carrier_families$Sex == 0)
+  num_aff_COL_male <- sum(carrier_families$isAffCOL == 1 & carrier_families$Sex == 1)
+  
+    num_aff_ENDO_female <- sum(carrier_families$isAffENDO == 1 & carrier_families$Sex == 0)
+  num_aff_ENDO_male <- sum(carrier_families$isAffENDO == 1 & carrier_families$Sex == 1)
+  
+    num_aff_GAS_female <- sum(carrier_families$isAffGAS == 1 & carrier_families$Sex == 0)
+  num_aff_GAS_male <- sum(carrier_families$isAffGAS == 1 & carrier_families$Sex == 1)
+  
+    num_aff_KID_female <- sum(carrier_families$isAffKID == 1 & carrier_families$Sex == 0)
+  num_aff_KID_male <- sum(carrier_families$isAffKID == 1 & carrier_families$Sex == 1)
+  
+    num_aff_LEUK_female <- sum(carrier_families$isAffLEUK == 1 & carrier_families$Sex == 0)
+  num_aff_LEUK_male <- sum(carrier_families$isAffLEUK == 1 & carrier_families$Sex == 1)
+  
+    num_aff_MELA_female <- sum(carrier_families$isAffMELA == 1 & carrier_families$Sex == 0)
+  num_aff_MELA_male <- sum(carrier_families$isAffMELA == 1 & carrier_families$Sex == 1)
+  
+    num_aff_OC_female <- sum(carrier_families$isAffOC == 1 & carrier_families$Sex == 0)
+  num_aff_OC_male <- sum(carrier_families$isAffOC == 1 & carrier_families$Sex == 1)
+  
+    num_aff_OST_female <- sum(carrier_families$isAffOST == 1 & carrier_families$Sex == 0)
+  num_aff_OST_male <- sum(carrier_families$isAffOST == 1 & carrier_families$Sex == 1)
+  
+    num_aff_PANC_female <- sum(carrier_families$isAffPANC == 1 & carrier_families$Sex == 0)
+  num_aff_PANC_male <- sum(carrier_families$isAffPANC == 1 & carrier_families$Sex == 1)
+  
+    num_aff_PROS_female <- sum(carrier_families$isAffPROS == 1 & carrier_families$Sex == 0)
+  num_aff_PROS_male <- sum(carrier_families$isAffPROS == 1 & carrier_families$Sex == 1)
+  
+    num_aff_SMA_female <- sum(carrier_families$isAffSMA == 1 & carrier_families$Sex == 0)
+  num_aff_SMA_male <- sum(carrier_families$isAffSMA == 1 & carrier_families$Sex == 1)
+  
+    num_aff_STS_female <- sum(carrier_families$isAffSTS == 1 & carrier_families$Sex == 0)
+  num_aff_STS_male <- sum(carrier_families$isAffSTS == 1 & carrier_families$Sex == 1)
+  
+    num_aff_THY_female <- sum(carrier_families$isAffTHY == 1 & carrier_families$Sex == 0)
+  num_aff_THY_male <- sum(carrier_families$isAffTHY == 1 & carrier_families$Sex == 1)
+  
+    num_aff_UB_female <- sum(carrier_families$isAffUB == 1 & carrier_families$Sex == 0)
+  num_aff_UB_male <- sum(carrier_families$isAffUB == 1 & carrier_families$Sex == 1)
+  
+    num_aff_HEP_female <- sum(carrier_families$isAffEP == 1 & carrier_families$Sex == 0)
+  num_aff_HEP_male <- sum(carrier_families$isAffEP == 1 & carrier_families$Sex == 1)
+  
+    num_aff_CBC_female <- sum(carrier_families$isAffCBC == 1 & carrier_families$Sex == 0)
+  num_aff_CBC_male <- sum(carrier_families$isAffCBC == 1 & carrier_families$Sex == 1)
+  
+    num_aff_BC2_female <- sum(carrier_families$isAffBC2 == 1 & carrier_families$Sex == 0)
+  num_aff_BC2_male <- sum(carrier_families$isAffBC2 == 1 & carrier_families$Sex == 1)
+  
+  # Print summary
+  cat("### Summary for gene:", gene, "\n")
+  cat("  * Number of Families:", num_families, "\n")
+  cat("  * Number of Individuals:", num_individuals, "\n")
+  cat("  * Number of Females:", num_females, "\n")
+  cat("  * Number of Males:", num_males, "\n")
+  cat("  * Number of Individuals genotyped:", num_genotyped, "\n")
+  cat("  * Number of Individuals with PV:", num_geno_1, "\n")
+  cat("  * Number of affected individuals (BRA - Females):", num_aff_BRA_female, "\n")
+  cat("  * Number of affected individuals (BRA - Males):", num_aff_BRA_male, "\n")
+  cat("  * Number of affected individuals (BC - Females):", num_aff_BC_female, "\n")
+  cat("  * Number of affected individuals (BC - Males):", num_aff_BC_male, "\n")
+  cat("  * Number of affected individuals (CER - Females):", num_aff_CER_female, "\n")
+  cat("  * Number of affected individuals (CER - Males):", num_aff_CER_male, "\n")
+  cat("  * Number of affected individuals (COL - Females):", num_aff_COL_female, "\n")
+  cat("  * Number of affected individuals (COL - Males):", num_aff_COL_male, "\n")
+  cat("  * Number of affected individuals (ENDO - Females):", num_aff_ENDO_female, "\n")
+  cat("  * Number of affected individuals (ENDO - Males):", num_aff_ENDO_male, "\n")
+  cat("  * Number of affected individuals (GAS - Females):", num_aff_GAS_female, "\n")
+  cat("  * Number of affected individuals (GAS - Males):", num_aff_GAS_male, "\n")
+  cat("  * Number of affected individuals (KID - Females):", num_aff_KID_female, "\n")
+  cat("  * Number of affected individuals (KID - Males):", num_aff_KID_male, "\n")
+  cat("  * Number of affected individuals (LEUK - Females):", num_aff_LEUK_female, "\n")
+  cat("  * Number of affected individuals (LEUK - Males):", num_aff_LEUK_male, "\n")
+  cat("  * Number of affected individuals (MELA - Females):", num_aff_MELA_female, "\n")
+  cat("  * Number of affected individuals (MELA - Males):", num_aff_MELA_male, "\n")
+  cat("  * Number of affected individuals (Ovarian Cancer - Females):", num_aff_OC_female, "\n")
+  cat("  * Number of affected individuals (Ovarian Cancer - Males):", num_aff_OC_male, "\n")
+  cat("  * Number of affected individuals (OST - Females):", num_aff_OST_female, "\n")
+  cat("  * Number of affected individuals (OST - Males):", num_aff_OST_male, "\n")
+  cat("  * Number of affected individuals (PANC - Females):", num_aff_PANC_female, "\n")
+  cat("  * Number of affected individuals (PANC - Males):", num_aff_PANC_male, "\n")
+  cat("  * Number of affected individuals (PROS - Females):", num_aff_PROS_female, "\n")
+  cat("  * Number of affected individuals (PROS - Males):", num_aff_PROS_male, "\n")
+  cat("  * Number of affected individuals (SMA - Females):", num_aff_SMA_female, "\n")
+  cat("  * Number of affected individuals (SMA - Males):", num_aff_SMA_male, "\n")
+  cat("  * Number of affected individuals (STS - Females):", num_aff_STS_female, "\n")
+  cat("  * Number of affected individuals (STS - Males):", num_aff_STS_male, "\n")
+  cat("  * Number of affected individuals (THY - Females):", num_aff_THY_female, "\n")
+  cat("  * Number of affected individuals (THY - Males):", num_aff_THY_male, "\n")
+  cat("  * Number of affected individuals (UB - Females):", num_aff_UB_female, "\n")
+  cat("  * Number of affected individuals (UB - Males):", num_aff_UB_male, "\n")
+  cat("  * Number of affected individuals (HEP - Females):", num_aff_HEP_female, "\n")
+  cat("  * Number of affected individuals (HEP - Males):", num_aff_HEP_male, "\n")
+  cat("  * Number of affected individuals (CBC - Females):", num_aff_CBC_female, "\n")
+  cat("  * Number of affected individuals (CBC - Males):", num_aff_CBC_male, "\n")
+  cat("  * Number of affected individuals (BC2 - Females):", num_aff_BC2_female, "\n")
+  cat("  * Number of affected individuals (BC2 - Males):", num_aff_BC2_male, "\n")
+  
+  
+  
+  carrier_families_list <- split(carrier_families, carrier_families$PedigreeID)
+  # Save the subsetted data to an RData file
+  save(carrier_families_list, file = paste0(gene, "_carrier_families.RData"))
+
+  
+  # Create a grid of histograms for age distributions
+  library(gridExtra)
+ 
+  
+  p1 <- ggplot(affected, aes(x = AgeBRA)) +
+    geom_histogram(binwidth = 5, fill = "red", color = "black") +
+    labs(title = paste("BRA", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p2 <- ggplot(affected, aes(x = AgeBC)) +
+    geom_histogram(binwidth = 5, fill = "blue", color = "black") +
+    labs(title = paste("Breast Cancer", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p3 <- ggplot(affected, aes(x = AgeCER)) +
+    geom_histogram(binwidth = 5, fill = "green", color = "black") +
+    labs(title = paste("CER", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p4 <- ggplot(affected, aes(x = AgeCOL)) +
+    geom_histogram(binwidth = 5, fill = "yellow", color = "black") +
+    labs(title = paste("COL", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p5 <- ggplot(affected, aes(x = AgeENDO)) +
+    geom_histogram(binwidth = 5, fill = "gray", color = "black") +
+    labs(title = paste("ENDO", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p6 <- ggplot(affected, aes(x = AgeGAS)) +
+    geom_histogram(binwidth = 5, fill = "purple", color = "black") +
+    labs(title = paste("GAS", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p7 <- ggplot(affected, aes(x = AgeKID)) +
+    geom_histogram(binwidth = 5, fill = "orange", color = "black") +
+    labs(title = paste("KID", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p8 <- ggplot(affected, aes(x = AgeLEUK)) +
+    geom_histogram(binwidth = 5, fill = "white", color = "black") +
+    labs(title = paste("LEUK", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p9 <- ggplot(affected, aes(x = AgeMELA)) +
+    geom_histogram(binwidth = 5, fill = "pink", color = "black") +
+    labs(title = paste("MELA", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p10 <- ggplot(affected, aes(x = AgeOC)) +
+    geom_histogram(binwidth = 5, fill = "violet", color = "black") +
+    labs(title = paste("Ovarian Cancer", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p11 <- ggplot(affected, aes(x = AgeOST)) +
+    geom_histogram(binwidth = 1, fill = "brown", color = "black") +
+    labs(title = paste("OST", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal() + xlim(range(affected$AgeOST))
+  p12 <- ggplot(affected, aes(x = AgePANC)) +
+    geom_histogram(binwidth = 5, fill = "cyan", color = "black") +
+    labs(title = paste("PANC", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p13 <- ggplot(affected, aes(x = AgePROS)) +
+    geom_histogram(binwidth = 5, fill = "chocolate", color = "black") +
+    labs(title = paste("PROS", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p14 <- ggplot(affected, aes(x = AgeSMA)) +
+    geom_histogram(binwidth = 5, fill = "beige", color = "black") +
+    labs(title = paste("SMA", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p15 <- ggplot(affected, aes(x = AgeSTS)) +
+    geom_histogram(binwidth = 5, fill = "magenta", color = "black") +
+    labs(title = paste("STS", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p16 <- ggplot(affected, aes(x = AgeTHY)) +
+    geom_histogram(binwidth = 5, fill = "coral", color = "black") +
+    labs(title = paste("THY", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p17 <- ggplot(affected, aes(x = AgeUB)) +
+    geom_histogram(binwidth = 5, fill = "firebrick", color = "black") +
+    labs(title = paste("UB", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p18 <- ggplot(affected, aes(x = AgeHEP)) +
+    geom_histogram(binwidth = 5, fill = "darkorchid", color = "black") +
+    labs(title = paste("HEP", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p19 <- ggplot(affected, aes(x = AgeCBC)) +
+    geom_histogram(binwidth = 5, fill = "gold", color = "black") +
+    labs(title = paste("CBC", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p20 <- ggplot(affected, aes(x = AgeBC2)) +
+    geom_histogram(binwidth = 5, fill = "lavender", color = "black") +
+    labs(title = paste("BC2", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p41 <- ggplot(affected, aes(x = AgeOC)) +
+    geom_histogram(binwidth = 5, fill = "violet", color = "black") +
+    labs(title = "Ovarian Cancer Age at Diagnosis", x = "Age at Diagnosis (years)", y = "Count") +
+    theme_minimal()+
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  grid.arrange( p1, p2, p3, p4,ncol=2)
+  grid.arrange(p5, p6, p7, p8, ncol=2)
+  grid.arrange(p9, p10, p11,p12, ncol=2)
+  grid.arrange(p13, p14, p15, p16,ncol=2)
+  grid.arrange(p17, p18, p19, p20, ncol = 2)
+  print(p41)
+ # Calculate the median age at diagnosis
+median_age <- median(affected$AgeOC, na.rm = TRUE)
+
+# Calculate the standard deviation of age at diagnosis
+sd_age <- sd(affected$AgeOC, na.rm = TRUE)
+# Calculate the quartiles for ovarian cancer age at diagnosis (AgeOC)
+quartiles_oc <- quantile(affected$AgeOC, na.rm = TRUE)
+
+# Print the quartiles
+cat("Quartiles for Age at Diagnosis (Ovarian Cancer):\n")
+print(quartiles_oc)
+
+# Print the results
+print(paste("Median Age at Diagnosis:", median_age))
+print(paste("Standard Deviation of Age at Diagnosis:", sd_age))
+
+  library(ggplot2)
+
+
+
+
+  
+  #now to proband...
+  proband_affected <- carriers[rowSums(carriers[lynch_cancers] == 1) > 0, ]
+
+  
+   # Number of individuals and families
+  num_proband_individuals <- nrow(carriers)
+  num_proband_females <- sum(carriers$Sex == 0)
+  num_proband_males <- sum(carriers$Sex == 1)
+  num_proband_geno_1 <- sum(carriers[[gene]] == 1, na.rm = TRUE)
+  num_proband_genotyped <- sum(carriers[[gene]] %in% c(0, 1), na.rm = TRUE)
+  
+  
+  num_aff_proband_BRA_female <- sum(carriers$isAffBRA == 1 & carriers$Sex == 0)
+  num_aff_proband_BRA_male <- sum(carriers$isAffBRA == 1 & carriers$Sex == 1)
+  
+  num_aff_proband_BC_female <- sum(carriers$isAffBC == 1 & carriers$Sex == 0)
+  num_aff_proband_BC_male <- sum(carriers$isAffBC == 1 & carriers$Sex == 1)
+  
+  num_aff_proband_CER_female <- sum(carriers$isAffCER == 1 & carriers$Sex == 0)
+  num_aff_proband_CER_male <- sum(carriers$isAffCER == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_COL_female <- sum(carriers$isAffCOL == 1 & carriers$Sex == 0)
+  num_aff_proband_COL_male <- sum(carriers$isAffCOL == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_ENDO_female <- sum(carriers$isAffENDO == 1 & carriers$Sex == 0)
+  num_aff_proband_ENDO_male <- sum(carriers$isAffENDO == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_GAS_female <- sum(carriers$isAffGAS == 1 & carriers$Sex == 0)
+  num_aff_proband_GAS_male <- sum(carriers$isAffGAS == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_KID_female <- sum(carriers$isAffKID == 1 & carriers$Sex == 0)
+  num_aff_proband_KID_male <- sum(carriers$isAffKID == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_LEUK_female <- sum(carriers$isAffLEUK == 1 & carriers$Sex == 0)
+  num_aff_proband_LEUK_male <- sum(carriers$isAffLEUK == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_MELA_female <- sum(carriers$isAffMELA == 1 & carriers$Sex == 0)
+  num_aff_proband_MELA_male <- sum(carriers$isAffMELA == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_OC_female <- sum(carriers$isAffOC == 1 & carriers$Sex == 0)
+  num_aff_proband_OC_male <- sum(carriers$isAffOC == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_OST_female <- sum(carriers$isAffOST == 1 & carriers$Sex == 0)
+  num_aff_proband_OST_male <- sum(carriers$isAffOST == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_PANC_female <- sum(carriers$isAffPANC == 1 & carriers$Sex == 0)
+  num_aff_proband_PANC_male <- sum(carriers$isAffPANC == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_PROS_female <- sum(carriers$isAffPROS == 1 & carriers$Sex == 0)
+  num_aff_proband_PROS_male <- sum(carriers$isAffPROS == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_SMA_female <- sum(carriers$isAffSMA == 1 & carriers$Sex == 0)
+  num_aff_proband_SMA_male <- sum(carriers$isAffSMA == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_STS_female <- sum(carriers$isAffSTS == 1 & carriers$Sex == 0)
+  num_aff_proband_STS_male <- sum(carriers$isAffSTS == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_THY_female <- sum(carriers$isAffTHY == 1 & carriers$Sex == 0)
+  num_aff_proband_THY_male <- sum(carriers$isAffTHY == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_UB_female <- sum(carriers$isAffUB == 1 & carriers$Sex == 0)
+  num_aff_proband_UB_male <- sum(carriers$isAffUB == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_HEP_female <- sum(carriers$isAffEP == 1 & carriers$Sex == 0)
+  num_aff_proband_HEP_male <- sum(carriers$isAffEP == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_CBC_female <- sum(carriers$isAffCBC == 1 & carriers$Sex == 0)
+  num_aff_proband_CBC_male <- sum(carriers$isAffCBC == 1 & carriers$Sex == 1)
+  
+    num_aff_proband_BC2_female <- sum(carriers$isAffBC2 == 1 & carriers$Sex == 0)
+  num_aff_proband_BC2_male <- sum(carriers$isAffBC2 == 1 & carriers$Sex == 1)
+  
+  # Print summary
+  cat("### Summary for gene:", gene, "\n")
+  cat("  * Number of Proband Individuals:", num_proband_individuals, "\n")
+  cat("  * Number of Proband Females:", num_proband_females, "\n")
+  cat("  * Number of Proband Males:", num_proband_males, "\n")
+  cat("  * Number of Proband Individuals genotyped:", num_proband_genotyped, "\n")
+  cat("  * Number of Proband Individuals with PV:", num_proband_geno_1, "\n")
+  cat("  * Number of Proband affected individuals (BRA - Females):", num_aff_proband_BRA_female, "\n")
+  cat("  * Number of Proband affected individuals (BRA - Males):", num_aff_proband_BRA_male, "\n")
+  cat("  * Number of Proband affected individuals (BC - Females):", num_aff_proband_BC_female, "\n")
+  cat("  * Number of Proband affected individuals (BC - Males):", num_aff_proband_BC_male, "\n")
+  cat("  * Number of Proband affected individuals (CER - Females):", num_aff_proband_CER_female, "\n")
+  cat("  * Number of Proband affected individuals (CER - Males):", num_aff_proband_CER_male, "\n")
+  cat("  * Number of Proband affected individuals (COL - Females):", num_aff_proband_COL_female, "\n")
+  cat("  * Number of Proband affected individuals (COL - Males):", num_aff_proband_COL_male, "\n")
+  cat("  * Number of Proband affected individuals (ENDO - Females):", num_aff_proband_ENDO_female, "\n")
+  cat("  * Number of Proband affected individuals (ENDO - Males):", num_aff_proband_ENDO_male, "\n")
+  cat("  * Number of Proband affected individuals (GAS - Females):", num_aff_proband_GAS_female, "\n")
+  cat("  * Number of Proband affected individuals (GAS - Males):", num_aff_proband_GAS_male, "\n")
+  cat("  * Number of Proband affected individuals (KID - Females):", num_aff_proband_KID_female, "\n")
+  cat("  * Number of Proband affected individuals (KID - Males):", num_aff_proband_KID_male, "\n")
+  cat("  * Number of Proband affected individuals (LEUK - Females):", num_aff_proband_LEUK_female, "\n")
+  cat("  * Number of Proband affected individuals (LEUK - Males):", num_aff_proband_LEUK_male, "\n")
+  cat("  * Number of Proband affected individuals (MELA - Females):", num_aff_proband_MELA_female, "\n")
+  cat("  * Number of Proband affected individuals (MELA - Males):", num_aff_proband_MELA_male, "\n")
+  cat("  * Number of Proband affected individuals (Ovarian Cancer - Females):", num_aff_proband_OC_female, "\n")
+  cat("  * Number of Proband affected individuals (Ovarian Cancer - Males):", num_aff_proband_OC_male, "\n")
+  cat("  * Number of Proband affected individuals (OST - Females):", num_aff_proband_OST_female, "\n")
+  cat("  * Number of Proband affected individuals (OST - Males):", num_aff_proband_OST_male, "\n")
+  cat("  * Number of Proband affected individuals (PANC - Females):", num_aff_proband_PANC_female, "\n")
+  cat("  * Number of Proband affected individuals (PANC - Males):", num_aff_proband_PANC_male, "\n")
+  cat("  * Number of Proband affected individuals (PROS - Females):", num_aff_proband_PROS_female, "\n")
+  cat("  * Number of Proband affected individuals (PROS - Males):", num_aff_proband_PROS_male, "\n")
+  cat("  * Number of Proband affected individuals (SMA - Females):", num_aff_proband_SMA_female, "\n")
+  cat("  * Number of Proband affected individuals (SMA - Males):", num_aff_proband_SMA_male, "\n")
+  cat("  * Number of Proband affected individuals (STS - Females):", num_aff_proband_STS_female, "\n")
+  cat("  * Number of Proband affected individuals (STS - Males):", num_aff_proband_STS_male, "\n")
+  cat("  * Number of Proband affected individuals (THY - Females):", num_aff_proband_THY_female, "\n")
+  cat("  * Number of Proband affected individuals (THY - Males):", num_aff_proband_THY_male, "\n")
+  cat("  * Number of Proband affected individuals (UB - Females):", num_aff_proband_UB_female, "\n")
+  cat("  * Number of Proband affected individuals (UB - Males):", num_aff_proband_UB_male, "\n")
+  cat("  * Number of Proband affected individuals (HEP - Females):", num_aff_proband_HEP_female, "\n")
+  cat("  * Number of Proband affected individuals (HEP - Males):", num_aff_proband_HEP_male, "\n")
+  cat("  * Number of Proband affected individuals (CBC - Females):", num_aff_proband_CBC_female, "\n")
+  cat("  * Number of Proband affected individuals (CBC - Males):", num_aff_proband_CBC_male, "\n")
+  cat("  * Number of Proband affected individuals (BC2 - Females):", num_aff_proband_BC2_female, "\n")
+  cat("  * Number of Proband affected individuals (BC2 - Males):", num_aff_proband_BC2_male, "\n")
+  
+  
+  
+ 
+  # Save the subsetted data to an RData file
+  save(carriers, file = paste0(gene, "_carriers.RData"))
+
+ 
+  
+  p21 <- ggplot(proband_affected, aes(x = AgeBRA)) +
+    geom_histogram(binwidth = 5, fill = "red", color = "black") +
+    labs(title = paste("Proband BRA", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p22 <- ggplot(proband_affected, aes(x = AgeBC)) +
+    geom_histogram(binwidth = 5, fill = "blue", color = "black") +
+    labs(title = paste("Proband Breast Cancer", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p23 <- ggplot(proband_affected, aes(x = AgeCER)) +
+    geom_histogram(binwidth = 5, fill = "green", color = "black") +
+    labs(title = paste("Proband CER", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p24 <- ggplot(proband_affected, aes(x = AgeCOL)) +
+    geom_histogram(binwidth = 5, fill = "yellow", color = "black") +
+    labs(title = paste("Proband COL", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p25 <- ggplot(proband_affected, aes(x = AgeENDO)) +
+    geom_histogram(binwidth = 5, fill = "gray", color = "black") +
+    labs(title = paste("Proband ENDO", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p26 <- ggplot(proband_affected, aes(x = AgeGAS)) +
+    geom_histogram(binwidth = 5, fill = "purple", color = "black") +
+    labs(title = paste("Proband GAS", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p27 <- ggplot(proband_affected, aes(x = AgeKID)) +
+    geom_histogram(binwidth = 5, fill = "orange", color = "black") +
+    labs(title = paste("Proband KID", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p28 <- ggplot(proband_affected, aes(x = AgeLEUK)) +
+    geom_histogram(binwidth = 5, fill = "white", color = "black") +
+    labs(title = paste("Proband EUK", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p29 <- ggplot(proband_affected, aes(x = AgeMELA)) +
+    geom_histogram(binwidth = 5, fill = "pink", color = "black") +
+    labs(title = paste("Proband MELA", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p30 <- ggplot(proband_affected, aes(x = AgeOC)) +
+    geom_histogram(binwidth = 5, fill = "violet", color = "black") +
+    labs(title = paste("Proband Ovarian Cancer", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p31 <- ggplot(proband_affected, aes(x = AgeOST)) +
+    geom_histogram(binwidth = 1, fill = "brown", color = "black") +
+    labs(title = paste("Proband OST", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal() + xlim(range(affected$AgeOST))
+  p32 <- ggplot(proband_affected, aes(x = AgePANC)) +
+    geom_histogram(binwidth = 5, fill = "cyan", color = "black") +
+    labs(title = paste("Proband PANC", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p33 <- ggplot(proband_affected, aes(x = AgePROS)) +
+    geom_histogram(binwidth = 5, fill = "chocolate", color = "black") +
+    labs(title = paste("Proband PROS", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p34 <- ggplot(proband_affected, aes(x = AgeSMA)) +
+    geom_histogram(binwidth = 5, fill = "beige", color = "black") +
+    labs(title = paste("Proband SMA", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p35 <- ggplot(proband_affected, aes(x = AgeSTS)) +
+    geom_histogram(binwidth = 5, fill = "magenta", color = "black") +
+    labs(title = paste("Proband STS", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p36 <- ggplot(proband_affected, aes(x = AgeTHY)) +
+    geom_histogram(binwidth = 5, fill = "coral", color = "black") +
+    labs(title = paste("Proband THY", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p37 <- ggplot(proband_affected, aes(x = AgeUB)) +
+    geom_histogram(binwidth = 5, fill = "firebrick", color = "black") +
+    labs(title = paste("Proband UB", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p38 <- ggplot(proband_affected, aes(x = AgeHEP)) +
+    geom_histogram(binwidth = 5, fill = "darkorchid", color = "black") +
+    labs(title = paste("Proband HEP", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p39 <- ggplot(proband_affected, aes(x = AgeCBC)) +
+    geom_histogram(binwidth = 5, fill = "gold", color = "black") +
+    labs(title = paste("Proband CBC", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  p40 <- ggplot(proband_affected, aes(x = AgeBC2)) +
+    geom_histogram(binwidth = 5, fill = "lavender", color = "black") +
+    labs(title = paste("Proband BC2", x = "Age at Diagnosis", y = "Count")) +
+    theme_minimal()
+  
+  grid.arrange( p21, p22, p23, p24,ncol=2)
+  grid.arrange(p25, p26, p27, p28, ncol=2)
+  grid.arrange(p29, p30, p31,p32, ncol=2)
+  grid.arrange(p33, p34, p35, p36,ncol=2)
+  grid.arrange(p37, p38, p39, p40, ncol = 2)
+}
+```
+
+options(max.print = 1e6)  # Increase the max print limit
+table(dat$AgeOC)
+
+
+```{r, echo=TRUE}
+create_gene_summaries(lynch_genes, dat)
+```
+
+

@@ -1,0 +1,185 @@
+---
+title: "PenEstim_OC_PALB2_vNK_not_remove_proband"
+author: "Koki Takabatake"
+date: "2024-10-13"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(penetrance)
+library(ggplot2)
+library(ggridges)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(GGally)
+
+set.seed(27)
+```
+
+
+
+```{r }
+# Load data
+load("/Users/kokitakabatake/Partners HealthCare Dropbox/BayesMendel/Projects/Active/NK_PenetranceEstimation/5_Data/PALB2_carrier_families.RData")
+load("/Users/kokitakabatake/Partners HealthCare Dropbox/Koki Takabatake/PanelPRODatabase.rda")
+dat <- carrier_families_list
+
+PanelPRO<-PanelPRODatabase
+```
+
+
+```{r est1, echo=TRUE, cache=FALSE}
+# Data Preperation in the right format
+for (i in seq_along(dat)) {
+  if ("ID" %in% colnames(dat[[i]])) {
+    colnames(dat[[i]])[colnames(dat[[i]]) == "PedigreeID"] <- "FamilyID"
+  }
+}
+for (i in seq_along(dat)) {
+  # Add a new column "PedigreeID" with the list number
+  dat[[i]]$PedigreeID <- i
+}
+
+# Change "isAffCOL" to "isAff" if "isAffCOL" is a column
+for (i in seq_along(dat)) {
+  if ("isAffOC" %in% colnames(dat[[i]])) {
+    colnames(dat[[i]])[colnames(dat[[i]]) == "isAffOC"] <- "isAff"
+  }
+}
+for (i in seq_along(dat)) {
+  if ("AgeOC" %in% colnames(dat[[i]])) {
+    colnames(dat[[i]])[colnames(dat[[i]]) == "AgeOC"] <- "Age"
+  }
+}
+for (i in seq_along(dat)) {
+  if ("PALB2" %in% colnames(dat[[i]])) {
+    colnames(dat[[i]])[colnames(dat[[i]]) == "PALB2"] <- "geno"
+  }
+}
+
+# Set the prior
+prior_params <- list(
+    asymptote = list(g1 = 3, g2 = 7),
+    threshold = list(min = 5, max = 40),
+    median = list(m1 = 2, m2 = 2),
+    first_quartile = list(q1 = 6, q2 = 3)
+)
+
+# Use the SEER baseline (imported seperately)
+baseline <- PanelPRO$Penetrance["Ovarian","SEER","All_Races",,,"Net"]
+# Adjust Format
+baseline_df <- as.data.frame(t(baseline))
+colnames(baseline_df) <- c("Female")
+baseline_df$Age <- as.numeric(rownames(baseline_df))
+#baseline_df <- baseline_df[, c("Female")]
+#allele frequency also in PanelProDatabase
+```
+
+str(baseline_df)
+
+
+```{r}
+
+print(baseline_df)
+
+# Ensure it’s a proper data frame
+baseline_df <- baseline_df[, c("Age", "Female")]
+
+# Check the structure of baseline_df
+print(head(baseline_df))
+
+# Calculate cumulative risk
+risk_df <- baseline_df %>%
+    arrange(Age) %>%
+     mutate(Cumulative_Risk = cumsum(Female))
+
+print(risk_df)
+
+# Plotting the cumulative risk curve
+ ggplot(risk_df, aes(x = Age, y = Cumulative_Risk*100)) +
+     geom_line(color = "blue", size = 1) +
+     geom_point(color = "red") +
+     labs(title = "Cumulative Risk Curve for Ovarian Cancer (SEER)",
+          x = "Age",
+          y = "Cumulative Risk (%)") +
+     theme_minimal() +
+     theme(plot.title = element_text(hjust = 0.5))  # Centering the title
+
+# Plotting the absolute risk (baseline risk at each age)
+ ggplot(baseline_df, aes(x = Age, y = Female * 100)) +  # Convert to percentage
+   geom_line(color = "blue", size = 1) +
+   geom_point(color = "red") +
+   labs(title = "Absolute Risk Curve for Ovarian Cancer (SEER)",
+        x = "Age",
+        y = "Absolute Risk (%)") +
+   theme_minimal() +
+   theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r}
+# Calculate the standard error for the cumulative risk
+risk_df <- risk_df %>%
+  mutate(Standard_Error = sqrt(cumsum(Female * (1 - Female / sum(Female))) / sum(Female)^2))
+
+# Calculate the 95% confidence interval
+risk_df <- risk_df %>%
+  mutate(
+    Lower_CI = Cumulative_Risk - 1.96 * Standard_Error,
+    Upper_CI = Cumulative_Risk + 1.96 * Standard_Error
+  )
+
+# Print the results including cumulative risk and its CI
+print(risk_df[, c("Age", "Cumulative_Risk", "Lower_CI", "Upper_CI")])
+
+
+```
+
+```{r}
+risk_df <- risk_df %>%
+    mutate(N = cumsum(Female))
+library(boot)
+
+# Function to calculate cumulative risk
+calc_cum_risk <- function(data, indices) {
+    d <- data[indices, ]
+    return(cumsum(d$Female))
+}
+
+# Bootstrapping to find confidence intervals
+boot_results <- boot(data = risk_df, statistic = calc_cum_risk, R = 1000)
+
+# Calculate 95% confidence intervals
+ci <- apply(boot_results$t, 2, function(x) quantile(x, c(0.025, 0.975)))
+
+# Add to risk_df
+risk_df <- risk_df %>%
+    mutate(Lower_CI = ci[1, ], Upper_CI = ci[2, ])
+# Assuming risk_df has been calculated with Cumulative_Risk, Lower_CI, and Upper_CI
+
+# Print the output with the required columns
+output_df <- risk_df[, c("Age", "Cumulative_Risk", "Lower_CI", "Upper_CI")]
+
+# Format the output for better readability
+output_df <- output_df %>%
+  mutate(
+    Cumulative_Risk = round(Cumulative_Risk * 100, 2),   # Convert to percentage
+    Lower_CI = round(Lower_CI * 100, 2),                 # Convert to percentage
+    Upper_CI = round(Upper_CI * 100, 2)                  # Convert to percentage
+  )
+
+# Print the final output
+print(output_df)
+
+```

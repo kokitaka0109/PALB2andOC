@@ -29,8 +29,6 @@ set.seed(27)
 
 ```{r }
 # Load data
-load("/Users/kokitakabatake/Partners HealthCare Dropbox/BayesMendel/Projects/Active/NK_PenetranceEstimation/5_Data/PALB2_carrier_families.RData")
-load("/Users/kokitakabatake/Partners HealthCare Dropbox/Koki Takabatake/PanelPRODatabase.rda")
 dat <- carrier_families_list
 
 PanelPRO<-PanelPRODatabase
